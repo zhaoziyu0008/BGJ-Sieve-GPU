@@ -85,8 +85,45 @@ $ ./hd_sieve --input INPUT_FILE --task sieve --TSD 110
 
 Before running any serious tasks, generally you should adjust `config.h` to match your hardware and get the best performance. You can control both the computational and storage resources used by `hd_sieve`. Compile again after modifying `config.h` to apply the changes.
 
-### Todo
+### Example: Reproducing the LWE Challenge
 
-- [ ] Add a log file example for left-progressive sieving.
-- [ ] Add an example for an LWE instance.
+This section gives a step-by-step example for reproducing the solution of one LWE challenge from the paper. Many of the concrete parameters here are not strict: adjusting them slightly will usually not make the overall computation dramatically faster or slower. The full process is expected to take a few days, depending on your machine configuration.
+
+1. Download a challenge instance.
+
+```bash
+$ wget https://www.latticechallenge.org/lwe_challenge/challenges/LWE_45_035.txt
+```
+
+2. Use its first 213 samples to construct a unique-SVP instance named `L_4535`.
+
+3. Apply a light BKZ reduction with `BGJ_SIEVE_AMX` to obtain something like `L_tmp0`.
+
+4. Run several rounds of heavy BKZ reduction with `hd_sieve`:
+
+```bash
+$ ./hd_sieve --input L_tmp0 --task bkz --BSD 115 --JUMP 8 --D4F 30 --STI 10 --output L_tmp1
+$ ./hd_sieve --input L_tmp1 --task bkz --BSD 122 --JUMP 8 --D4F 32 --STI 5 --output L_tmp2
+$ ./hd_sieve --input L_tmp2 --task bkz --BSD 129 --JUMP 8 --D4F 35 --STI 0 --output L_tmp3
+```
+
+Note: the files `L_tmp1`, `L_tmp2`, and `L_tmp3` are also included in the `example/` directory. Since sieving is randomized, your intermediate results may look very different from mine, but the basis quality should be comparable.
+
+5. Run one large sieving job:
+
+```bash
+$ ./hd_sieve --input L_tmp3 --task sieve --MLD 135
+```
+
+Once the sieving dimension exceeds 135, this command prints the current shortest-vector length at each dimension. Around sieving dimension 153, you are expected to find something like:
+
+```text
+[62 67 9 36 -47 37 -49 12 -86 58 52 -58 -50 -7 -4 53 -13 61 43 96 89 6 41 46 111 48 41 23 84 7 71 -65 64 -33 64 87 11 -113 31 0 46 6 -34 95 -52 -36 -26 11 -150 -93 -78 -118 53 -35 -16 -75 -13 59 -70 197 -83 102 44 69 20 137 21 -93 -20 49 46 73 -83 -73 -151 115 67 -28 18 -19 17 7 -110 38 -92 -24 -3 -26 -108 17 -24 -5 6 48 20 -91 -84 32 -25 -18 40 39 98 13 36 24 44 40 -184 131 48 -7 -37 112 137 30 -115 7 42 -10 -14 -50 51 -25 -16 -5 -72 -131 49 -39 -79 -16 -8 63 4 -3 -21 81 3 59 55 23 4 -12 -10 7 -74 35 133 -86 -155 -66 -82 14 4 2 55 80 -15 -20 137 -186 106 202 21 14 -48 -82 -25 150 3 153 -40 70 -9 -15 -2 71 42 36 30 132 -28 4 184 -102 -30 -12 -71 40 -23 2 -115 23 -30 12 -9 -79 -13 -43 -57 -20 35 36 74 102 81 33 -57 -92 -13 9 -70.945]
+```
+
+After obtaining the short vector, you can easily recover the secret:
+
+```text
+[1635 312 1536 1180 158 319 1028 117 1113 760 649 12 1383 411 35 323 1399 97 168 1666 796 724 1451 1670 1830 1031 1863 165 52 614 146 813 1492 616 119 1331 1595 1803 1226 1095 1326 847 963 1085 2016]
+```
 
